@@ -1,12 +1,15 @@
 package org.apache.rocketmq.test.luo;
 
 import org.apache.rocketmq.client.producer.DefaultMQProducer;
+import org.apache.rocketmq.client.producer.MessageQueueSelector;
 import org.apache.rocketmq.client.producer.SendResult;
 import org.apache.rocketmq.common.message.Message;
+import org.apache.rocketmq.common.message.MessageQueue;
 import org.apache.rocketmq.test.luo.base.BaseInfo;
 import org.junit.Test;
 
 import java.util.Date;
+import java.util.List;
 
 /**
  * Description: 生产者测试用例
@@ -55,6 +58,36 @@ public class ProducerTest implements BaseInfo {
             SendResult result = producer.send(message);
             System.out.println(result);
         }
+
+        producer.shutdown();
+    }
+
+    /**
+     * 顺序消息生产者
+     */
+    @Test
+    public void orderMessageProducer() throws Exception {
+        DefaultMQProducer producer = new DefaultMQProducer(producerGroup);
+        producer.setNamesrvAddr(namesrvAddr);
+        producer.setInstanceName(producerInstance);
+        producer.start();
+
+        for (int i = 0; i < 1; i++) {
+            Message message = new Message(topic, ("message " + i).getBytes());
+            message.setDelayTimeLevel(4);
+
+            SendResult result = producer.send(message, new MessageQueueSelector() {
+                @Override
+                public MessageQueue select(List<MessageQueue> mqs, Message msg, Object arg) {
+                    return mqs.get((Integer) arg % mqs.size());
+                }
+            }, 0);
+            System.out.println(result);
+
+            Thread.sleep(8000);
+        }
+
+        producer.shutdown();
     }
 
 }
