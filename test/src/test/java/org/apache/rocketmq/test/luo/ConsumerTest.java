@@ -6,6 +6,7 @@ import org.apache.rocketmq.client.consumer.listener.MessageListenerConcurrently;
 import org.apache.rocketmq.test.luo.base.BaseInfo;
 import org.junit.Test;
 
+import java.util.Date;
 import java.util.concurrent.locks.LockSupport;
 
 /**
@@ -29,7 +30,9 @@ public class ConsumerTest implements BaseInfo {
         consumer.subscribe(topic, "*");
 
         consumer.registerMessageListener((MessageListenerConcurrently) (msgList, context) -> {
-            msgList.forEach(msg -> System.out.println(new String(msg.getBody())));
+            msgList.forEach(msg -> {
+                System.out.println(new Date() + ": " + new String(msg.getBody()));
+            });
             return ConsumeConcurrentlyStatus.CONSUME_SUCCESS;
         });
 

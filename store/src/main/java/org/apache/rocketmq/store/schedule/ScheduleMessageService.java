@@ -16,12 +16,8 @@
  */
 package org.apache.rocketmq.store.schedule;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.rocketmq.common.ConfigManager;
@@ -116,6 +112,7 @@ public class ScheduleMessageService extends ConfigManager {
             }
         }
 
+        // 定时持久化(延时消息)发送进度
         this.timer.scheduleAtFixedRate(new TimerTask() {
 
             @Override
@@ -170,6 +167,7 @@ public class ScheduleMessageService extends ConfigManager {
         return delayOffsetSerializeWrapper.toJson(prettyFormat);
     }
 
+    // 解析延时级别和对应延时时间
     public boolean parseDelayLevel() {
         HashMap<String, Long> timeUnitTable = new HashMap<String, Long>();
         timeUnitTable.put("s", 1000L);
@@ -202,6 +200,9 @@ public class ScheduleMessageService extends ConfigManager {
         return true;
     }
 
+    /**
+     * 延时消息发送任务线程
+     */
     class DeliverDelayedMessageTimerTask extends TimerTask {
         private final int delayLevel;
         private final long offset;
@@ -224,7 +225,8 @@ public class ScheduleMessageService extends ConfigManager {
         }
 
         /**
-         * @return
+         * 纠正deliver时间
+         * 因为发送级别对应的发送间隔可以调整，如果超过当前间隔，则修正成当前配置，避免后面的消息无法发送。
          */
         private long correctDeliverTimestamp(final long now, final long deliverTimestamp) {
 
@@ -275,14 +277,15 @@ public class ScheduleMessageService extends ConfigManager {
                             nextOffset = offset + (i / ConsumeQueue.CQ_STORE_UNIT_SIZE);
 
                             long countdown = deliverTimestamp - now;
-
                             if (countdown <= 0) {
+                                // 消息到达可发送时间
                                 MessageExt msgExt =
                                     ScheduleMessageService.this.defaultMessageStore.lookMessageByOffset(
                                         offsetPy, sizePy);
 
                                 if (msgExt != null) {
                                     try {
+                                        // 投递延时消息
                                         MessageExtBrokerInner msgInner = this.messageTimeup(msgExt);
                                         PutMessageResult putMessageResult =
                                             ScheduleMessageService.this.defaultMessageStore
@@ -293,6 +296,7 @@ public class ScheduleMessageService extends ConfigManager {
                                             continue;
                                         } else {
                                             // XXX: warn and notify me
+                                            // 延时消息发送失败，安排下一次任务
                                             log.error(
                                                 "ScheduleMessageService, a message time up, but reput it failed, topic: {} msgId {}",
                                                 msgExt.getTopic(), msgExt.getMsgId());
@@ -306,9 +310,6 @@ public class ScheduleMessageService extends ConfigManager {
                                     } catch (Exception e) {
                                         /*
                                          * XXX: warn and notify me
-
-
-
                                          */
                                         log.error(
                                             "ScheduleMessageService, messageTimeup execute error, drop it. msgExt="
@@ -317,6 +318,7 @@ public class ScheduleMessageService extends ConfigManager {
                                     }
                                 }
                             } else {
+                                // 如果延时消息时间还未达到，则阻塞到延时消息时间点为止
                                 ScheduleMessageService.this.timer.schedule(
                                     new DeliverDelayedMessageTimerTask(this.delayLevel, nextOffset),
                                     countdown);
@@ -371,6 +373,7 @@ public class ScheduleMessageService extends ConfigManager {
             msgInner.setWaitStoreMsgOK(false);
             MessageAccessor.clearProperty(msgInner, MessageConst.PROPERTY_DELAY_TIME_LEVEL);
 
+            // 设置真实的topic和queueId
             msgInner.setTopic(msgInner.getProperty(MessageConst.PROPERTY_REAL_TOPIC));
 
             String queueIdStr = msgInner.getProperty(MessageConst.PROPERTY_REAL_QUEUE_ID);
