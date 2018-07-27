@@ -424,12 +424,14 @@ public class ConsumeQueue {
             return true;
         }
 
+        // 待写入consumerQueue的数据，大小是20字节
         this.byteBufferIndex.flip();
         this.byteBufferIndex.limit(CQ_STORE_UNIT_SIZE);
         this.byteBufferIndex.putLong(offset);
         this.byteBufferIndex.putInt(size);
         this.byteBufferIndex.putLong(tagsCode);
 
+        // 计算consumeQueue存储位置，并获得对应的MappedFile
         final long expectLogicOffset = cqOffset * CQ_STORE_UNIT_SIZE;
 
         MappedFile mappedFile = this.mappedFileQueue.getLastMappedFile(expectLogicOffset);
@@ -439,7 +441,7 @@ public class ConsumeQueue {
                 this.minLogicOffset = expectLogicOffset;
                 this.mappedFileQueue.setFlushedWhere(expectLogicOffset);
                 this.mappedFileQueue.setCommittedWhere(expectLogicOffset);
-                this.fillPreBlank(mappedFile, expectLogicOffset);
+                this.fillPreBlank(mappedFile, expectLogicOffset); // 填充空白区域
                 log.info("fill pre blank space " + mappedFile.getFileName() + " " + expectLogicOffset + " "
                     + mappedFile.getWrotePosition());
             }
@@ -464,7 +466,9 @@ public class ConsumeQueue {
                     );
                 }
             }
+            // 设置commitLog重放消息到ConsumeQueue位置
             this.maxPhysicOffset = offset;
+            // 插入mappedFile
             return mappedFile.appendMessage(this.byteBufferIndex.array());
         }
         return false;

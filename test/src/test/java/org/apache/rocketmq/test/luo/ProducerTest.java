@@ -83,8 +83,6 @@ public class ProducerTest implements BaseInfo {
                 }
             }, 0);
             System.out.println(result);
-
-            Thread.sleep(8000);
         }
 
         producer.shutdown();

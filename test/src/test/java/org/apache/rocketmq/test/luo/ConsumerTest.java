@@ -86,12 +86,6 @@ public class ConsumerTest implements BaseInfo {
                 msgList.forEach(msg -> {
                     System.out.println(formatDate(null) + Thread.currentThread().getName() + ": " + new String(msg.getBody()));
                 });
-
-                try {
-                    Thread.sleep(10 * 1000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
                 return ConsumeOrderlyStatus.SUCCESS;
             }
         });

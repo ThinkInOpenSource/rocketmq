@@ -67,6 +67,7 @@ public class DefaultMessageStore implements MessageStore {
     // CommitLog
     private final CommitLog commitLog;
 
+    // ConsumerQueue结构
     private final ConcurrentMap<String/* topic */, ConcurrentMap<Integer/* queueId */, ConsumeQueue>> consumeQueueTable;
 
     private final FlushConsumeQueueService flushConsumeQueueService;
@@ -1636,17 +1637,18 @@ public class DefaultMessageStore implements MessageStore {
 
     class FlushConsumeQueueService extends ServiceThread {
         private static final int RETRY_TIMES_OVER = 3;
-        private long lastFlushTimestamp = 0;
+        private long lastFlushTimestamp = 0; // 最后flush时间戳
 
         private void doFlush(int retryTimes) {
             int flushConsumeQueueLeastPages = DefaultMessageStore.this.getMessageStoreConfig().getFlushConsumeQueueLeastPages();
 
+            // retryTimes == RETRY_TIMES_OVER时，进行强制flush。主要用于shutdown时。
             if (retryTimes == RETRY_TIMES_OVER) {
                 flushConsumeQueueLeastPages = 0;
             }
 
+            // 当时间满足flushConsumeQueueThoroughInterval时，即使写入的数量不足flushConsumeQueueLeastPages，也进行flush
             long logicsMsgTimestamp = 0;
-
             int flushConsumeQueueThoroughInterval = DefaultMessageStore.this.getMessageStoreConfig().getFlushConsumeQueueThoroughInterval();
             long currentTimeMillis = System.currentTimeMillis();
             if (currentTimeMillis >= (this.lastFlushTimestamp + flushConsumeQueueThoroughInterval)) {
@@ -1655,8 +1657,8 @@ public class DefaultMessageStore implements MessageStore {
                 logicsMsgTimestamp = DefaultMessageStore.this.getStoreCheckpoint().getLogicsMsgTimestamp();
             }
 
+            // flush消费队列
             ConcurrentMap<String, ConcurrentMap<Integer, ConsumeQueue>> tables = DefaultMessageStore.this.consumeQueueTable;
-
             for (ConcurrentMap<Integer, ConsumeQueue> maps : tables.values()) {
                 for (ConsumeQueue cq : maps.values()) {
                     boolean result = false;
@@ -1666,10 +1668,12 @@ public class DefaultMessageStore implements MessageStore {
                 }
             }
 
+            // flush 存储 check point
             if (0 == flushConsumeQueueLeastPages) {
                 if (logicsMsgTimestamp > 0) {
                     DefaultMessageStore.this.getStoreCheckpoint().setLogicsMsgTimestamp(logicsMsgTimestamp);
                 }
+                // 写入consumerQueue文件
                 DefaultMessageStore.this.getStoreCheckpoint().flush();
             }
         }
@@ -1736,18 +1740,20 @@ public class DefaultMessageStore implements MessageStore {
             return DefaultMessageStore.this.commitLog.getMaxOffset() - this.reputFromOffset;
         }
 
+        // 根据commitLog决定是否 write ConsumeQueue
         private boolean isCommitLogAvailable() {
             return this.reputFromOffset < DefaultMessageStore.this.commitLog.getMaxOffset();
         }
 
         private void doReput() {
             for (boolean doNext = true; this.isCommitLogAvailable() && doNext; ) {
-
+                // 开启了副本？
                 if (DefaultMessageStore.this.getMessageStoreConfig().isDuplicationEnable()
                     && this.reputFromOffset >= DefaultMessageStore.this.getConfirmOffset()) {
                     break;
                 }
 
+                // 获取commitLog中从reputFromOffset开始的MappedFile中的MappedByteBuffer
                 SelectMappedBufferResult result = DefaultMessageStore.this.commitLog.getData(reputFromOffset);
                 if (result != null) {
                     try {
@@ -1756,12 +1762,13 @@ public class DefaultMessageStore implements MessageStore {
                         for (int readSize = 0; readSize < result.getSize() && doNext; ) {
                             DispatchRequest dispatchRequest =
                                 DefaultMessageStore.this.commitLog.checkMessageAndReturnSize(result.getByteBuffer(), false, false);
-                            int size = dispatchRequest.getMsgSize();
+                            int size = dispatchRequest.getMsgSize(); // 消息长度
 
                             if (dispatchRequest.isSuccess()) {
                                 if (size > 0) {
                                     DefaultMessageStore.this.doDispatch(dispatchRequest);
 
+                                    // 通知消费队列有新的消息
                                     if (BrokerRole.SLAVE != DefaultMessageStore.this.getMessageStoreConfig().getBrokerRole()
                                         && DefaultMessageStore.this.brokerConfig.isLongPollingEnable()) {
                                         DefaultMessageStore.this.messageArrivingListener.arriving(dispatchRequest.getTopic(),
@@ -1779,7 +1786,7 @@ public class DefaultMessageStore implements MessageStore {
                                             .getSinglePutMessageTopicSizeTotal(dispatchRequest.getTopic())
                                             .addAndGet(dispatchRequest.getMsgSize());
                                     }
-                                } else if (size == 0) {
+                                } else if (size == 0) { // 读取到MappedFile文件尾
                                     this.reputFromOffset = DefaultMessageStore.this.commitLog.rollNextFile(this.reputFromOffset);
                                     readSize = result.getSize();
                                 }
@@ -1794,7 +1801,7 @@ public class DefaultMessageStore implements MessageStore {
                                         log.error("[BUG]the master dispatch message to consume queue error, COMMITLOG OFFSET: {}",
                                             this.reputFromOffset);
 
-                                        this.reputFromOffset += result.getSize() - readSize;
+                                        this.reputFromOffset += result.getSize() - readSize; // bug?
                                     }
                                 }
                             }
