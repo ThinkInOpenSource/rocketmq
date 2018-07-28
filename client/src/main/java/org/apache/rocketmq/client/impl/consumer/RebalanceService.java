@@ -21,6 +21,8 @@ import org.apache.rocketmq.client.log.ClientLogger;
 import org.apache.rocketmq.common.ServiceThread;
 import org.slf4j.Logger;
 
+import java.util.Random;
+
 public class RebalanceService extends ServiceThread {
     private static long waitInterval =
         Long.parseLong(System.getProperty(
@@ -46,6 +48,7 @@ public class RebalanceService extends ServiceThread {
 
     @Override
     public String getServiceName() {
+        // 如果有多个RebalanceService，它们的thread name一样了，则不设计成RebalanceService.class.getSimpleName() + 0/1/2这种呢
         return RebalanceService.class.getSimpleName();
     }
 }

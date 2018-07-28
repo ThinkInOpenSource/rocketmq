@@ -51,6 +51,12 @@ public class AllocateMessageQueueAveragely implements AllocateMessageQueueStrate
             return result;
         }
 
+        /*
+         * 平均队列散列算法
+         * 1. mqAll.size大于等于cidAll.size，如果mqAll.size能整除cidAll.size，则平均分配
+         * 2. mqAll.size大于等于cidAll.size，mqAll.size不能整除cidAll.size，现将(mqAll.size-余数)平均分配，剩下的cidAll元素依次分一个
+         * 3. mqAll.size小于cidAll.size，cidAll元素依次分一个，cidAll中位于后面的consumer将分配不到
+         */
         int index = cidAll.indexOf(currentCID);
         int mod = mqAll.size() % cidAll.size();
         int averageSize =

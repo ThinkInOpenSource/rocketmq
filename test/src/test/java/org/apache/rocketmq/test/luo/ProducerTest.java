@@ -48,12 +48,11 @@ public class ProducerTest implements BaseInfo {
     public void delayMessageProducer() throws Exception {
         DefaultMQProducer producer = new DefaultMQProducer(producerGroup);
         producer.setNamesrvAddr(namesrvAddr);
-        producer.setInstanceName(producerInstance);
         producer.start();
 
-        for (int i = 0; i < 1; i++) {
+        for (int i = 1; i <= 18; i++) {
             Message message = new Message(topic, ("message " + i + new Date()).getBytes());
-            message.setDelayTimeLevel(4);
+            message.setDelayTimeLevel(i);
 
             SendResult result = producer.send(message);
             System.out.println(result);

@@ -18,15 +18,8 @@ package org.apache.rocketmq.client.impl.factory;
 
 import java.io.UnsupportedEncodingException;
 import java.net.DatagramSocket;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Random;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
@@ -947,7 +940,14 @@ public class MQClientInstance {
         this.rebalanceService.wakeup();
     }
 
+    /**
+     * 负责分配当前Consumer可消费的消息队列，目前只有以下3种情况下触发：
+     *   1. PushConsumer 启动时，调用 rebalanceService#wakeup(...) 触发
+     *   2. Broker 通知 Consumer 加入 或 移除时，Consumer 响应通知，调用 rebalanceService#wakeup(...) 触发
+     *   3. 默认每20s触发一次
+     */
     public void doRebalance() {
+        // consumerTable以groupName为key，MQConsumerInner为value，目前的使用中consumerTable只包含当前Comsumer自己
         for (Map.Entry<String, MQConsumerInner> entry : this.consumerTable.entrySet()) {
             MQConsumerInner impl = entry.getValue();
             if (impl != null) {
