@@ -75,6 +75,7 @@ public class AllocateMessageQueueConsistentHash implements AllocateMessageQueueS
             return result;
         }
 
+        // 创建hash环
         Collection<ClientNode> cidNodes = new ArrayList<ClientNode>();
         for (String cid : cidAll) {
             cidNodes.add(new ClientNode(cid));

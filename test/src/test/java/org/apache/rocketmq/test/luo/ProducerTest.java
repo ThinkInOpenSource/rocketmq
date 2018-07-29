@@ -26,7 +26,6 @@ public class ProducerTest implements BaseInfo {
     public void defaultProducer() throws Exception {
         DefaultMQProducer producer = new DefaultMQProducer(producerGroup);
         producer.setNamesrvAddr(namesrvAddr);
-        producer.setInstanceName(producerInstance);
         producer.start();
 
         for (int i = 0; i < 10; i++) {
