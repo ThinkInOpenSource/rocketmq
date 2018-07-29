@@ -5,6 +5,7 @@ import org.apache.commons.lang3.time.DateUtils;
 import org.apache.rocketmq.client.consumer.DefaultMQPushConsumer;
 import org.apache.rocketmq.client.consumer.listener.*;
 import org.apache.rocketmq.client.consumer.rebalance.AllocateMessageQueueByMachineRoom;
+import org.apache.rocketmq.common.consumer.ConsumeFromWhere;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.common.protocol.heartbeat.MessageModel;
 import org.apache.rocketmq.test.luo.base.BaseInfo;
@@ -29,10 +30,12 @@ public class ConsumerTest implements BaseInfo {
      */
     @Test
     public void defaultConsumer() throws Exception {
-        DefaultMQPushConsumer consumer = new DefaultMQPushConsumer(consumerGroup);
+        DefaultMQPushConsumer consumer = new DefaultMQPushConsumer(consumerGroup + "4");
         consumer.setNamesrvAddr(namesrvAddr);
-        consumer.setInstanceName(consumerInstance);
         consumer.subscribe(topic, "*");
+
+        // 默认ConsumeFromWhere.CONSUME_FROM_LAST_OFFSET
+        consumer.setConsumeFromWhere(ConsumeFromWhere.CONSUME_FROM_LAST_OFFSET);
 
         consumer.registerMessageListener((MessageListenerConcurrently) (msgList, context) -> {
             msgList.forEach(msg -> {

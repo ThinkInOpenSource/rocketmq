@@ -123,6 +123,10 @@ public class ProcessQueue {
         }
     }
 
+    /**
+     * 添加消息，并返回是否提交给消费者
+     * 返回true，当有新消息添加成功时
+     */
     public boolean putMessage(final List<MessageExt> msgs) {
         boolean dispatchToConsume = false;
         try {

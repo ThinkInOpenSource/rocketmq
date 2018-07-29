@@ -71,11 +71,15 @@ public class PullAPIWrapper {
         final SubscriptionData subscriptionData) {
         PullResultExt pullResultExt = (PullResultExt) pullResult;
 
+        // 更新消息队列拉取消息Broker编号的映射
         this.updatePullFromWhichNode(mq, pullResultExt.getSuggestWhichBrokerId());
+        // 解析消息，并根据订阅信息消息tagCode匹配合适消息
         if (PullStatus.FOUND == pullResult.getPullStatus()) {
+            // 解析消息
             ByteBuffer byteBuffer = ByteBuffer.wrap(pullResultExt.getMessageBinary());
             List<MessageExt> msgList = MessageDecoder.decodes(byteBuffer);
 
+            // 根据订阅信息消息tagCode匹配合适消息
             List<MessageExt> msgListFilterAgain = msgList;
             if (!subscriptionData.getTagsSet().isEmpty() && !subscriptionData.isClassFilterMode()) {
                 msgListFilterAgain = new ArrayList<MessageExt>(msgList.size());
@@ -88,13 +92,14 @@ public class PullAPIWrapper {
                 }
             }
 
-            if (this.hasHook()) {
+            if (this.hasHook()) { // Hook
                 FilterMessageContext filterMessageContext = new FilterMessageContext();
                 filterMessageContext.setUnitMode(unitMode);
                 filterMessageContext.setMsgList(msgListFilterAgain);
                 this.executeHook(filterMessageContext);
             }
 
+            // 设置消息队列当前最小/最大位置到消息拓展字段
             for (MessageExt msg : msgListFilterAgain) {
                 MessageAccessor.putProperty(msg, MessageConst.PROPERTY_MIN_OFFSET,
                     Long.toString(pullResult.getMinOffset()));
@@ -102,9 +107,11 @@ public class PullAPIWrapper {
                     Long.toString(pullResult.getMaxOffset()));
             }
 
+            // 设置消息列表
             pullResultExt.setMsgFoundList(msgListFilterAgain);
         }
 
+        // 清空消息二进制数组
         pullResultExt.setMessageBinary(null);
 
         return pullResult;
@@ -149,6 +156,7 @@ public class PullAPIWrapper {
         final CommunicationMode communicationMode,
         final PullCallback pullCallback
     ) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
+        // 获取Broker信息
         FindBrokerResult findBrokerResult =
             this.mQClientFactory.findBrokerAddressInSubscribe(mq.getBrokerName(),
                 this.recalculatePullFromWhichNode(mq), false);
@@ -159,6 +167,7 @@ public class PullAPIWrapper {
                     this.recalculatePullFromWhichNode(mq), false);
         }
 
+        // 请求拉取消息
         if (findBrokerResult != null) {
             {
                 // check version
@@ -192,6 +201,7 @@ public class PullAPIWrapper {
                 brokerAddr = computPullFromWhichFilterServer(mq.getTopic(), brokerAddr);
             }
 
+            // 发起网络请求
             PullResult pullResult = this.mQClientFactory.getMQClientAPIImpl().pullMessage(
                 brokerAddr,
                 requestHeader,

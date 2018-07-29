@@ -215,7 +215,7 @@ public class RebalancePushImpl extends RebalanceImpl {
     }
 
     /**
-     * 发起消息拉取请求。该调用是PushConsumer不断不断不断拉取消息的起点。
+     * 发起消息拉取请求。该调用使PushConsumer不断不断不断拉取消息的起点。
      */
     @Override
     public void dispatchPullRequest(List<PullRequest> pullRequestList) {
