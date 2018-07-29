@@ -28,7 +28,7 @@ public class ProducerTest implements BaseInfo {
         producer.setNamesrvAddr(namesrvAddr);
         producer.start();
 
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 1; i++) {
             Message message = new Message(topic, ("message " + i).getBytes());
             SendResult result = producer.send(message);
             System.out.println(result);

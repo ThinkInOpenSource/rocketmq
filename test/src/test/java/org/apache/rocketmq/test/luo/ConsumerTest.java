@@ -39,7 +39,7 @@ public class ConsumerTest implements BaseInfo {
 
         consumer.registerMessageListener((MessageListenerConcurrently) (msgList, context) -> {
             msgList.forEach(msg -> {
-                System.out.println(formatDate(null) + Thread.currentThread().getName() + ": " + new String(msg.getBody()));
+//                System.out.println(formatDate(null) + Thread.currentThread().getName() + ": " + new String(msg.getBody()));
             });
             return ConsumeConcurrentlyStatus.CONSUME_SUCCESS;
         });

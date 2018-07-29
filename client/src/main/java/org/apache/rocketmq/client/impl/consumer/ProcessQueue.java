@@ -74,12 +74,15 @@ public class ProcessQueue {
      * @param pushConsumer
      */
     public void cleanExpiredMsg(DefaultMQPushConsumer pushConsumer) {
+        // 顺序消费时，直接返回
         if (pushConsumer.getDefaultMQPushConsumerImpl().isConsumeOrderly()) {
             return;
         }
 
+        // 循环移除消息 每次循环最多移除16个
         int loop = msgTreeMap.size() < 16 ? msgTreeMap.size() : 16;
         for (int i = 0; i < loop; i++) {
+            // 获取第一条消息。判断是否超时，若不超时，则结束循环
             MessageExt msg = null;
             try {
                 this.lockTreeMap.readLock().lockInterruptibly();
@@ -98,7 +101,7 @@ public class ProcessQueue {
             }
 
             try {
-
+                // 发回超时消息
                 pushConsumer.sendMessageBack(msg, 3);
                 log.info("send expire msg back. topic={}, msgId={}, storeHost={}, queueId={}, queueOffset={}", msg.getTopic(), msg.getMsgId(), msg.getStoreHost(), msg.getQueueId(), msg.getQueueOffset());
                 try {
@@ -193,9 +196,11 @@ public class ProcessQueue {
             this.lastConsumeTimestamp = now;
             try {
                 if (!msgTreeMap.isEmpty()) {
+                    // this.queueOffsetMax：当前queue消费过消息的最大offset
                     result = this.queueOffsetMax + 1;
                     int removedCnt = 0;
                     for (MessageExt msg : msgs) {
+                        // 移除消息，msgTreeMap中数据是在putMessage时添加的
                         MessageExt prev = msgTreeMap.remove(msg.getQueueOffset());
                         if (prev != null) {
                             removedCnt--;
