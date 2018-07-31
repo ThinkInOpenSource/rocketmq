@@ -330,7 +330,7 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
 
         // 移除消费成功消息，并更新最新消费进度
         long offset = consumeRequest.getProcessQueue().removeMessage(consumeRequest.getMsgs());
-        System.out.println(offset + " " + consumeRequest.getMessageQueue());
+//        System.out.println(offset + " " + consumeRequest.getMessageQueue());
         if (offset >= 0 && !consumeRequest.getProcessQueue().isDropped()) {
             this.defaultMQPushConsumerImpl.getOffsetStore().updateOffset(consumeRequest.getMessageQueue(), offset, true);
         }
