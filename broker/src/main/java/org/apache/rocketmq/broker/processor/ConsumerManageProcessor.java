@@ -52,7 +52,7 @@ public class ConsumerManageProcessor implements NettyRequestProcessor {
         switch (request.getCode()) {
             case RequestCode.GET_CONSUMER_LIST_BY_GROUP:
                 return this.getConsumerListByGroup(ctx, request);
-            case RequestCode.UPDATE_CONSUMER_OFFSET:
+            case RequestCode.UPDATE_CONSUMER_OFFSET: // consumer更新消费进度
                 return this.updateConsumerOffset(ctx, request);
             case RequestCode.QUERY_CONSUMER_OFFSET:
                 return this.queryConsumerOffset(ctx, request);

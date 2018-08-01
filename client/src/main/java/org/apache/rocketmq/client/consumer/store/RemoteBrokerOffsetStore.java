@@ -125,7 +125,7 @@ public class RemoteBrokerOffsetStore implements OffsetStore {
                 if (offset != null) {
                     if (mqs.contains(mq)) {
                         try {
-                            System.out.println(new Date() + " persistAll: " + mq + " - " + offset.get());
+//                            System.out.println(new Date() + " persistAll: " + mq + " - " + offset.get());
                             this.updateConsumeOffsetToBroker(mq, offset.get());
                             log.info("[persistAll] Group: {} ClientId: {} updateConsumeOffsetToBroker {} {}",
                                 this.groupName,

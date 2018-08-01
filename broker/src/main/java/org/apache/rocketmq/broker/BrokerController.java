@@ -291,7 +291,7 @@ public class BrokerController {
                         log.error("schedule persist consumerOffset error.", e);
                     }
                 }
-            }, 1000 * 10, this.brokerConfig.getFlushConsumerOffsetInterval(), TimeUnit.MILLISECONDS);
+            }, 1000 * 10, this.brokerConfig.getFlushConsumerOffsetInterval() /*默认5s*/, TimeUnit.MILLISECONDS);
 
             this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
                 @Override

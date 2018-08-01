@@ -35,15 +35,15 @@ public class PullMessageRequestHeader implements CommandCustomHeader {
     @CFNotNull
     private Long queueOffset;
     @CFNotNull
-    private Integer maxMsgNums;
+    private Integer maxMsgNums; // 消息数量
     @CFNotNull
-    private Integer sysFlag;
+    private Integer sysFlag; // 系统标识
     @CFNotNull
-    private Long commitOffset;
+    private Long commitOffset; // 提交消费进度位置
     @CFNotNull
-    private Long suspendTimeoutMillis;
+    private Long suspendTimeoutMillis; // 挂起超时时间
     @CFNullable
-    private String subscription;
+    private String subscription; // 订阅表达式
     @CFNotNull
     private Long subVersion;
     private String expressionType;
