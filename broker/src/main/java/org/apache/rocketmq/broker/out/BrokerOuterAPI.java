@@ -113,6 +113,7 @@ public class BrokerOuterAPI {
         if (nameServerAddressList != null) {
             for (String namesrvAddr : nameServerAddressList) {
                 try {
+                    // 循环注册到各namesrv，根据oneway决定是同步还是单向通信方式
                     RegisterBrokerResult result = this.registerBroker(namesrvAddr, clusterName, brokerAddr, brokerName, brokerId,
                         haServerAddr, topicConfigWrapper, filterServerList, oneway, timeoutMills);
                     if (result != null) {

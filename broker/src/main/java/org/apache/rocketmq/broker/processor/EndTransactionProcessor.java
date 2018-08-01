@@ -45,6 +45,9 @@ public class EndTransactionProcessor implements NettyRequestProcessor {
         this.brokerController = brokerController;
     }
 
+    /**
+     * Broker 处理结束事务请求
+     */
     @Override
     public RemotingCommand processRequest(ChannelHandlerContext ctx,
         RemotingCommand request) throws RemotingCommandException {
@@ -112,6 +115,7 @@ public class EndTransactionProcessor implements NettyRequestProcessor {
             }
         }
 
+        // 查询提交的消息
         final MessageExt msgExt = this.brokerController.getMessageStore().lookMessageByOffset(requestHeader.getCommitLogOffset());
         if (msgExt != null) {
             final String pgroupRead = msgExt.getProperty(MessageConst.PROPERTY_PRODUCER_GROUP);
@@ -133,6 +137,7 @@ public class EndTransactionProcessor implements NettyRequestProcessor {
                 return response;
             }
 
+            // 生成内部消息
             MessageExtBrokerInner msgInner = this.endMessageTransaction(msgExt);
             msgInner.setSysFlag(MessageSysFlag.resetTransactionValue(msgInner.getSysFlag(), requestHeader.getCommitOrRollback()));
 
@@ -143,6 +148,7 @@ public class EndTransactionProcessor implements NettyRequestProcessor {
                 msgInner.setBody(null);
             }
 
+            // 存储生成消息，交给ReputMessageService，也就是交给DefaultMessageStore
             final MessageStore messageStore = this.brokerController.getMessageStore();
             final PutMessageResult putMessageResult = messageStore.putMessage(msgInner);
             if (putMessageResult != null) {

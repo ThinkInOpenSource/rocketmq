@@ -1,15 +1,15 @@
 package org.apache.rocketmq.test.luo;
 
-import org.apache.rocketmq.client.producer.DefaultMQProducer;
-import org.apache.rocketmq.client.producer.MessageQueueSelector;
-import org.apache.rocketmq.client.producer.SendResult;
+import org.apache.rocketmq.client.producer.*;
 import org.apache.rocketmq.common.message.Message;
+import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.common.message.MessageQueue;
 import org.apache.rocketmq.test.luo.base.BaseInfo;
 import org.junit.Test;
 
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.locks.LockSupport;
 
 /**
  * Description: 生产者测试用例
@@ -83,6 +83,47 @@ public class ProducerTest implements BaseInfo {
             System.out.println(result);
         }
 
+        producer.shutdown();
+    }
+
+    /**
+     * 事务消息发送示例
+     */
+    @Test
+    public void transactionProducer() throws Exception {
+        String groupName = "transaction-group";
+        TransactionMQProducer producer = new TransactionMQProducer(groupName);
+        producer.setNamesrvAddr(namesrvAddr);
+        producer.setTransactionCheckListener(new TransactionCheckListener() {
+            // broker回查事务消息状态的回调
+            @Override
+            public LocalTransactionState checkLocalTransactionState(MessageExt msg) {
+                System.out.println("checkLocalTransactionState: " + msg);
+                return LocalTransactionState.COMMIT_MESSAGE;
+            }
+        });
+
+        producer.start();
+
+        for (int i = 0; i < 1; i++) {
+            System.out.println("send message " + i + " " + new Date());
+            Message message = new Message(topic, ("message " + i + " " + new Date()).getBytes());
+
+            TransactionSendResult result = producer.sendMessageInTransaction(message, new LocalTransactionExecuter() {
+                @Override
+                public LocalTransactionState executeLocalTransactionBranch(Message msg, Object arg) {
+                    System.out.println("executeLocalTransactionBranch: " + msg);
+                    System.out.println("executeLocalTransactionBranch: " + arg);
+                    // 本地事务操作
+
+                    return LocalTransactionState.COMMIT_MESSAGE;
+                }
+            }, null);
+
+            System.out.println(result);
+        }
+
+//        LockSupport.park();
         producer.shutdown();
     }
 

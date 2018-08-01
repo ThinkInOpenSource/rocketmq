@@ -549,7 +549,7 @@ public class HAService {
             while (!this.isStopped()) {
                 try {
                     if (this.connectMaster()) {
-
+                        // 若到满足上报间隔，上报到Master进度
                         if (this.isTimeToReportOffset()) {
                             boolean result = this.reportSlaveMaxOffset(this.currentReportedOffset);
                             if (!result) {
@@ -559,15 +559,18 @@ public class HAService {
 
                         this.selector.select(1000);
 
+                        // 处理读取事件
                         boolean ok = this.processReadEvent();
                         if (!ok) {
                             this.closeMaster();
                         }
 
+                        // 若进度有变化，上报到Master进度
                         if (!reportSlaveMaxOffsetPlus()) {
                             continue;
                         }
 
+                        // Master过久未返回数据，关闭连接
                         long interval =
                             HAService.this.getDefaultMessageStore().getSystemClock().now()
                                 - this.lastWriteTimestamp;

@@ -148,6 +148,7 @@ public class HAConnection {
         private boolean processReadEvent() {
             int readSizeZeroTimes = 0;
 
+            // 清空byteBufferRead
             if (!this.byteBufferRead.hasRemaining()) {
                 this.byteBufferRead.flip();
                 this.processPostion = 0;
@@ -158,18 +159,24 @@ public class HAConnection {
                     int readSize = this.socketChannel.read(this.byteBufferRead);
                     if (readSize > 0) {
                         readSizeZeroTimes = 0;
+
+                        // 设置最后读取时间
                         this.lastReadTimestamp = HAConnection.this.haService.getDefaultMessageStore().getSystemClock().now();
                         if ((this.byteBufferRead.position() - this.processPostion) >= 8) {
+                            // 读取Slave 请求来的CommitLog的最大位置
                             int pos = this.byteBufferRead.position() - (this.byteBufferRead.position() % 8);
                             long readOffset = this.byteBufferRead.getLong(pos - 8);
                             this.processPostion = pos;
 
+                            // 设置Slave CommitLog的最大位置
                             HAConnection.this.slaveAckOffset = readOffset;
+                            // 设置Slave 第一次请求的位置
                             if (HAConnection.this.slaveRequestOffset < 0) {
                                 HAConnection.this.slaveRequestOffset = readOffset;
                                 log.info("slave[" + HAConnection.this.clientAddr + "] request offset " + readOffset);
                             }
 
+                            // 通知目前Slave进度。主要用于Master节点为同步类型的。
                             HAConnection.this.haService.notifyTransferSome(HAConnection.this.slaveAckOffset);
                         }
                     } else if (readSize == 0) {
@@ -216,11 +223,13 @@ public class HAConnection {
                 try {
                     this.selector.select(1000);
 
+                    // 未获得Slave读取进度请求，sleep等待。
                     if (-1 == HAConnection.this.slaveRequestOffset) {
                         Thread.sleep(10);
                         continue;
                     }
 
+                    // 计算初始化nextTransferFromWhere
                     if (-1 == this.nextTransferFromWhere) {
                         if (0 == HAConnection.this.slaveRequestOffset) {
                             long masterOffset = HAConnection.this.haService.getDefaultMessageStore().getCommitLog().getMaxOffset();
@@ -262,11 +271,13 @@ public class HAConnection {
                                 continue;
                         }
                     } else {
+                        // 未传输完成，继续传输
                         this.lastWriteOver = this.transferData();
                         if (!this.lastWriteOver)
                             continue;
                     }
 
+                    // 选择新的CommitLog数据进行传输
                     SelectMappedBufferResult selectResult =
                         HAConnection.this.haService.getDefaultMessageStore().getCommitLogData(this.nextTransferFromWhere);
                     if (selectResult != null) {
@@ -290,18 +301,17 @@ public class HAConnection {
 
                         this.lastWriteOver = this.transferData();
                     } else {
-
+                        // 没新的消息，挂起等待
                         HAConnection.this.haService.getWaitNotifyObject().allWaitForRunning(100);
                     }
                 } catch (Exception e) {
-
                     HAConnection.log.error(this.getServiceName() + " service has exception.", e);
                     break;
                 }
             }
 
             HAConnection.this.haService.getWaitNotifyObject().removeFromWaitingThreadTable();
-
+            // 断开连接 & 暂停写线程 & 暂停读线程 & 释放CommitLog
             if (this.selectMappedBufferResult != null) {
                 this.selectMappedBufferResult.release();
             }
@@ -327,6 +337,9 @@ public class HAConnection {
             HAConnection.log.info(this.getServiceName() + " service end");
         }
 
+        /**
+         * 传输数据
+         */
         private boolean transferData() throws Exception {
             int writeSizeZeroTimes = 0;
             // Write Header
